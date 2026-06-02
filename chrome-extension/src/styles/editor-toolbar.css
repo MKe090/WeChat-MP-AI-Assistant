@@ -1,0 +1,54 @@
+/* 编辑器增强工具栏样式 */
+.waa-toolbar {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  gap: 4px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.waa-toolbar-group {
+  display: flex;
+  gap: 2px;
+}
+
+.waa-toolbar-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.waa-toolbar-btn:hover {
+  background: #f0f0f0;
+  border-color: #1677ff;
+  color: #1677ff;
+}
+
+.waa-toolbar-btn:active {
+  background: #e6f4ff;
+  border-color: #1677ff;
+  color: #1677ff;
+  transform: scale(0.95);
+}
+
+.waa-toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: #e8e8e8;
+  margin: 0 4px;
+}

@@ -1,0 +1,32 @@
+sequenceDiagram
+    actor User
+    participant SP as SidePanel<br/>(WritingPanel)
+    participant CS as ContentScript<br/>(WritingPlugin)
+    participant BG as Background<br/>(AIProxy)
+    participant SV as LocalServer<br/>(AI Route)
+    participant AI as AIService<br/>(OpenAI/Ollama)
+
+    User->>SP: 输入主题 + 选择模式
+    SP->>CS: sendMessage(AI_WRITING_START, {topic, mode})
+    CS->>BG: chrome.runtime.sendMessage(AI_WRITING_START)
+    BG->>SV: POST /api/ai/writing (SSE)
+    SV->>AI: chat(params) - 流式调用
+
+    loop SSE 流式输出
+        AI-->>SV: chunk: "在当今..."
+        SV-->>BG: SSE data: {chunk, done:false}
+        BG-->>CS: chrome.runtime.sendMessage(AI_WRITING_CHUNK)
+        CS-->>SP: postMessage({type: AI_WRITING_CHUNK})
+        SP-->>User: 实时显示生成内容
+    end
+
+    AI-->>SV: done
+    SV-->>BG: SSE data: {chunk:"", done:true}
+    BG-->>CS: chrome.runtime.sendMessage(AI_WRITING_DONE)
+    CS-->>SP: postMessage({type: AI_WRITING_DONE})
+
+    User->>SP: 点击"插入编辑器"
+    SP->>CS: sendMessage(EDITOR_INSERT, {content})
+    CS->>CS: EditorAdapter.insertAtCursor(html)
+    CS-->>SP: 插入成功
+    SP-->>User: 显示成功提示

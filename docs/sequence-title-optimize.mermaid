@@ -1,0 +1,27 @@
+sequenceDiagram
+    actor User
+    participant SP as SidePanel<br/>(TitlePanel)
+    participant CS as ContentScript<br/>(TitlePlugin)
+    participant BG as Background<br/>(AIProxy)
+    participant SV as LocalServer<br/>(AI Route)
+    participant AI as AIService
+
+    User->>SP: 点击"标题优化"
+    SP->>CS: sendMessage(AI_TITLE_OPTIMIZE)
+    CS->>CS: EditorAdapter.getTitle() 获取当前标题
+    CS->>CS: EditorAdapter.getContent() 获取文章摘要
+    CS->>BG: chrome.runtime.sendMessage(AI_TITLE_OPTIMIZE, {title, content})
+    BG->>SV: POST /api/ai/title-optimize {title, content}
+
+    SV->>AI: complete({prompt: titlePrompt + title})
+    AI-->>SV: JSON: {score, suggestedTitles, analysis}
+    SV-->>BG: {code:0, data: TitleAnalysis}
+    BG-->>CS: {score, suggestedTitles, analysis}
+    CS-->>SP: postMessage(标题分析结果)
+    SP-->>User: 显示评分 + 备选标题列表
+
+    User->>SP: 选择某个备选标题
+    SP->>CS: sendMessage(EDITOR_SET_TITLE, {title})
+    CS->>CS: EditorAdapter.setTitle(newTitle)
+    CS-->>SP: 替换成功
+    SP-->>User: 标题已更新

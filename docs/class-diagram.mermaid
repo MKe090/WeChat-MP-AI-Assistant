@@ -1,0 +1,245 @@
+classDiagram
+    %% ===== Chrome 扩展 - Background 层 =====
+    class BackgroundService {
+        +initialize(): void
+        +onMessage(listener: Function): void
+        +sendMessage(msg: ExtMessage): void
+    }
+
+    class MessageRouter {
+        -handlers: Map~string, MessageHandler~
+        +register(type: string, handler: MessageHandler): void
+        +route(message: ExtMessage): Promise~any~
+    }
+
+    class AIProxy {
+        -baseUrl: string
+        +request(endpoint: string, params: any): Promise~any~
+        +requestSSE(endpoint: string, params: any): AsyncGenerator~string~
+    }
+
+    class SSERelay {
+        -activePorts: Map~string, chrome.runtime.Port~
+        +startRelay(stream: AsyncGenerator, port: Port): void
+        +stopRelay(streamId: string): void
+    }
+
+    class StorageManager {
+        +get(key: string): Promise~any~
+        +set(key: string, value: any): Promise~void~
+        +getSession(key: string): Promise~any~
+        +setSession(key: string, value: any): Promise~void~
+    }
+
+    BackgroundService --> MessageRouter : uses
+    MessageRouter --> AIProxy : routes to
+    AIProxy --> SSERelay : streams via
+    BackgroundService --> StorageManager : uses
+
+    %% ===== Chrome 扩展 - Content Script 层 =====
+    class PluginHost {
+        -plugins: Map~string, BasePlugin~
+        +register(plugin: BasePlugin): void
+        +initialize(): void
+        +getPlugin(name: string): BasePlugin
+    }
+
+    class BasePlugin {
+        <<abstract>>
+        #name: string
+        #host: PluginHost
+        +activate(): void
+        +deactivate(): void
+        +sendMessage(msg: ExtMessage): Promise~any~
+        +onMessage(callback: Function): void
+    }
+
+    class WritingPlugin {
+        -mode: WritingMode
+        +startWriting(topic: string, mode: WritingMode): void
+        +insertToEditor(content: string): void
+    }
+
+    class TitlePlugin {
+        +analyzeTitle(title: string): Promise~TitleAnalysis~
+        +replaceTitle(newTitle: string): void
+    }
+
+    class FormattingPlugin {
+        -currentStyle: string
+        +applyStyle(styleName: string): Promise~void~
+        +previewStyle(styleName: string): Promise~string~
+    }
+
+    class DiagnosisPlugin {
+        +collectArticleData(): Promise~ArticleData[]~
+        +requestDiagnosis(data: ArticleData[]): Promise~DiagnosisReport~
+    }
+
+    class EditorEnhancePlugin {
+        +insertFormat(type: FormatType): void
+        +registerToolbar(): void
+    }
+
+    class ViolationPlugin {
+        +scanContent(content: string): Promise~ViolationResult~
+    }
+
+    PluginHost --> BasePlugin : manages
+    BasePlugin <|-- WritingPlugin
+    BasePlugin <|-- TitlePlugin
+    BasePlugin <|-- FormattingPlugin
+    BasePlugin <|-- DiagnosisPlugin
+    BasePlugin <|-- EditorEnhancePlugin
+    BasePlugin <|-- ViolationPlugin
+
+    class Injector {
+        -sidePanelContainer: HTMLElement
+        +injectSidePanel(): void
+        +injectToolbar(): void
+        +createShadowRoot(): ShadowRoot
+    }
+
+    class EditorAdapter {
+        +getContent(): string
+        +setContent(html: string): void
+        +getTitle(): string
+        +setTitle(title: string): void
+        +insertAtCursor(html: string): void
+        +getSelection(): SelectionInfo
+    }
+
+    class EditorObserver {
+        -observer: MutationObserver
+        +startWatch(): void
+        +stopWatch(): void
+        +onEditorReady(callback: Function): void
+        +onContentChange(callback: Function): void
+    }
+
+    %% ===== 本地后端服务 =====
+    class LocalServer {
+        -fastify: FastifyInstance
+        +start(port: number): Promise~void~
+        +stop(): Promise~void~
+    }
+
+    class AIService {
+        -provider: AIProvider
+        -currentMode: AIMode
+        +switchProvider(mode: AIMode): void
+        +chat(params: ChatParams): AsyncGenerator~string~
+        +complete(params: ChatParams): Promise~string~
+    }
+
+    class AIProvider {
+        <<interface>>
+        +chat(params: ChatParams): AsyncGenerator~string~
+        +complete(params: ChatParams): Promise~string~
+    }
+
+    class OpenAIProvider {
+        -client: OpenAI
+        -apiKey: string
+        -baseUrl: string
+        +chat(params: ChatParams): AsyncGenerator~string~
+        +complete(params: ChatParams): Promise~string~
+    }
+
+    class OllamaProvider {
+        -baseUrl: string
+        -model: string
+        +chat(params: ChatParams): AsyncGenerator~string~
+        +complete(params: ChatParams): Promise~string~
+    }
+
+    AIService --> AIProvider : uses
+    AIProvider <|.. OpenAIProvider
+    AIProvider <|.. OllamaProvider
+    LocalServer --> AIService : provides
+
+    class SensitiveWordsService {
+        -builtInWords: string[]
+        -customWords: string[]
+        +loadBuiltIn(): void
+        +addCustomWords(words: string[]): void
+        +scan(text: string): ViolationItem[]
+    }
+
+    class ArticleExtractor {
+        +extract(url: string): Promise~ExtractedArticle~
+        +toMarkdown(html: string): string
+    }
+
+    class DatabaseService {
+        -db: Database
+        +initialize(): void
+        +run(sql: string, params: any[]): void
+        +get(sql: string, params: any[]): any
+        +all(sql: string, params: any[]): any[]
+    }
+
+    LocalServer --> DatabaseService : uses
+
+    %% ===== 数据模型 =====
+    class User {
+        +id: string
+        +email: string
+        +name: string
+        +avatar: string
+        +aiMode: AIMode
+        +openaiApiKey: string
+        +ollamaBaseUrl: string
+        +ollamaModel: string
+        +createdAt: string
+        +updatedAt: string
+    }
+
+    class Template {
+        +id: string
+        +userId: string
+        +name: string
+        +category: string
+        +styleHtml: string
+        +styleCss: string
+        +preview: string
+        +createdAt: string
+    }
+
+    class ArticleData {
+        +title: string
+        +url: string
+        +publishTime: string
+        +readCount: number
+        +likeCount: number
+        +shareCount: number
+        +commentCount: number
+    }
+
+    class DiagnosisReport {
+        +id: string
+        +userId: string
+        +articleCount: number
+        +avgReadCount: number
+        +topArticles: ArticleData[]
+        +suggestions: DiagnosisSuggestion[]
+        +generatedAt: string
+    }
+
+    class TitleAnalysis {
+        +score: number
+        +originalTitle: string
+        +suggestedTitles: SuggestedTitle[]
+        +analysis: string
+    }
+
+    class ViolationResult {
+        +hasViolation: boolean
+        +items: ViolationItem[]
+        +riskLevel: RiskLevel
+        +suggestions: string[]
+    }
+
+    User "1" --> "*" Template : owns
+    User "1" --> "*" DiagnosisReport : has
+    DiagnosisReport --> "*" ArticleData : analyzes

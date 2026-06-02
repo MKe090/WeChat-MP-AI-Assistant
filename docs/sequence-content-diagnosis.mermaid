@@ -1,0 +1,37 @@
+sequenceDiagram
+    actor User
+    participant SP as SidePanel<br/>(DiagnosisPanel)
+    participant CS as ContentScript<br/>(DiagnosisPlugin)
+    participant BG as Background<br/>(AIProxy)
+    participant SV as LocalServer<br/>(AI Route)
+    participant AI as AIService
+
+    User->>SP: 点击"内容诊断"
+    SP->>CS: sendMessage(AI_DIAGNOSIS_START)
+
+    Note over CS: 浏览器页面抓取（不依赖微信API）
+    CS->>CS: 导航到"已发送"消息列表页
+    loop 逐页采集文章数据
+        CS->>CS: 解析文章列表 DOM
+        CS->>CS: 提取标题、阅读量、点赞数、分享数
+        CS->>CS: 翻页继续采集
+    end
+
+    CS->>CS: 汇总 ArticleData[]（最近 N 篇）
+    CS->>BG: chrome.runtime.sendMessage(AI_DIAGNOSIS, {articles})
+    BG->>SV: POST /api/ai/diagnosis {articles}
+
+    SV->>AI: chat({prompt: diagnosisPrompt + articlesJSON})
+    loop SSE 流式生成报告
+        AI-->>SV: chunk
+        SV-->>BG: SSE data
+        BG-->>CS: AI_DIAGNOSIS_CHUNK
+        CS-->>SP: postMessage(chunk)
+        SP-->>User: 实时显示诊断报告
+    end
+
+    AI-->>SV: done
+    SV-->>BG: SSE done
+    BG-->>CS: AI_DIAGNOSIS_DONE
+    CS-->>SP: 诊断完成
+    SP-->>User: 完整策略报告展示

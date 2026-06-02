@@ -1,0 +1,32 @@
+sequenceDiagram
+    actor User
+    participant SP as SidePanel<br/>(FormattingPanel)
+    participant CS as ContentScript<br/>(FormattingPlugin)
+    participant BG as Background<br/>(AIProxy)
+    participant SV as LocalServer<br/>(AI Route)
+    participant AI as AIService
+
+    User->>SP: 选择排版风格（如"优雅"）
+    SP->>CS: sendMessage(AI_FORMATTING, {styleName})
+    CS->>CS: EditorAdapter.getContent() 获取当前编辑器 HTML
+    CS->>BG: chrome.runtime.sendMessage(AI_FORMATTING, {html, styleName})
+    BG->>SV: POST /api/ai/formatting {html, styleName}
+
+    SV->>AI: complete({prompt: formattingPrompt + html + styleCss})
+    AI-->>SV: formattedHtml
+    SV-->>BG: {code:0, data: {formattedHtml}}
+    BG-->>CS: {formattedHtml}
+
+    CS->>CS: EditorAdapter.setContent(formattedHtml)
+    CS-->>SP: 排版应用成功
+    SP-->>User: 显示"排版完成"
+
+    Note over User,SP: 预览流程（可选）
+    User->>SP: 点击"预览"
+    SP->>CS: sendMessage(AI_FORMATTING_PREVIEW, {styleName})
+    CS->>BG: 请求预览
+    BG->>SV: POST /api/ai/formatting-preview
+    SV-->>BG: {previewHtml}
+    BG-->>CS: {previewHtml}
+    CS-->>SP: 渲染预览
+    SP-->>User: 显示预览效果
