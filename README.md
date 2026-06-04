@@ -1,3 +1,5 @@
+<img width="480" height="648" alt="image" src="https://github.com/user-attachments/assets/34631db6-a5a8-4ef3-b80c-1c7a07404f04" />
+
 # 公众号 AI 助手
 AI驱动的公众号内容创作效率助手
 
